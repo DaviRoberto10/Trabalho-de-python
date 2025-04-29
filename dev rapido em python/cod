@@ -1,14 +1,17 @@
-
+# ========================== IMPORTAÇÕES ==========================
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import csv
 
+# ======================= VARIÁVEIS GLOBAIS =======================
 dados = []
 caminho_arquivo = None
 
+# ======================= FUNÇÃO PADRÃO ENTRY ======================
 def criar_entry_padrao(master, largura):
     return tk.Entry(master, width=largura)
 
+# ============================ FUNÇÕES ============================
 def carregar_dados(caminho):
     with open(caminho, encoding='utf-8') as csvfile:
         leitor = csv.DictReader(csvfile)
@@ -23,7 +26,6 @@ def salvar_csv():
         writer.writerows(dados)
 
 def atualizar_lista(categoria=None, artista=None, ano=None, titulo=None, palavra_chave=None):
-
     lista.delete(*lista.get_children())
     for item in dados:
         if categoria and item['category'] != categoria:
@@ -72,6 +74,7 @@ def buscar():
 def pesquisa_rapida(event=None):
     termo = entry_pesquisa_rapida.get().strip().lower()
     lista.delete(*lista.get_children())
+
     for item in dados:
         linha_completa = " ".join(item.values()).lower()
         if termo in linha_completa:
@@ -163,6 +166,7 @@ def editar_item():
 
     tk.Button(janela_edicao, text="Salvar", command=salvar_edicao).grid(row=len(campos), column=0, columnspan=2, pady=10)
 
+# ========================== INTERFACE ===========================
 root = tk.Tk()
 root.title("Indicados ao Grammy")
 root.geometry("1200x700")
@@ -173,11 +177,43 @@ frame_topo.pack(pady=10)
 btn_abrir = tk.Button(frame_topo, text="Abrir CSV", command=abrir_arquivo)
 btn_abrir.grid(row=0, column=0, padx=5)
 
-tk.Label(frame_topo, text="Pesquisa Geral").grid(row=0, column=1)
+# Campo de pesquisa rápida
+tk.Label(frame_topo, text="🔍 Pesquisar Geral").grid(row=0, column=1)
 entry_pesquisa_rapida = criar_entry_padrao(frame_topo, 30)
 entry_pesquisa_rapida.grid(row=0, column=2, columnspan=2, padx=5)
 entry_pesquisa_rapida.bind("<KeyRelease>", pesquisa_rapida)
 
+# Campos de busca
+tk.Label(frame_topo, text="Categoria").grid(row=1, column=0)
+entry_categoria_busca = criar_entry_padrao(frame_topo, 20)
+entry_categoria_busca.grid(row=1, column=1)
+
+tk.Label(frame_topo, text="Artista").grid(row=1, column=2)
+entry_artista = criar_entry_padrao(frame_topo, 20)
+entry_artista.grid(row=1, column=3)
+
+tk.Label(frame_topo, text="Ano").grid(row=1, column=4)
+entry_ano_busca = criar_entry_padrao(frame_topo, 10)
+entry_ano_busca.grid(row=1, column=5)
+
+tk.Label(frame_topo, text="Título Música/Álbum").grid(row=1, column=6)
+entry_titulo = criar_entry_padrao(frame_topo, 20)
+entry_titulo.grid(row=1, column=7)
+
+tk.Label(frame_topo, text="Palavra-chave").grid(row=1, column=8)
+entry_palavra = criar_entry_padrao(frame_topo, 15)
+entry_palavra.grid(row=1, column=9)
+
+btn_buscar = tk.Button(frame_topo, text="Buscar", command=buscar)
+btn_buscar.grid(row=1, column=10, padx=5)
+
+btn_deletar = tk.Button(frame_topo, text="Deletar Selecionado", command=deletar_item)
+btn_deletar.grid(row=2, column=0, padx=5, pady=5)
+
+btn_editar = tk.Button(frame_topo, text="Editar Selecionado", command=editar_item)
+btn_editar.grid(row=2, column=1, padx=5)
+
+# Campos de adição
 tk.Label(frame_topo, text="Ano").grid(row=3, column=0)
 entry_ano = criar_entry_padrao(frame_topo, 10)
 entry_ano.grid(row=3, column=1)
@@ -209,6 +245,7 @@ entry_url.grid(row=4, column=7)
 btn_adicionar = tk.Button(frame_topo, text="Adicionar Linha", command=adicionar_linha)
 btn_adicionar.grid(row=4, column=8, padx=5)
 
+# ====================== TABELA DE REGISTROS ======================
 colunas = ("Ano", "Edição Anual", "Categoria", "Artista", "Música/Álbum", "Vencedor", "URL")
 frame_lista = tk.Frame(root)
 frame_lista.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
