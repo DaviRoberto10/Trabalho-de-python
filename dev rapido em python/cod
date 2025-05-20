@@ -1,4 +1,3 @@
-# ========================== IMPORTAÇÕES ==========================
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import csv
@@ -11,7 +10,7 @@ caminho_arquivo = None
 def criar_entry_padrao(master, largura):
     return tk.Entry(master, width=largura)
 
-# ============================ FUNÇÕES ============================
+# ======================== FUNÇÕES AUXILIARES ========================
 def carregar_dados(caminho):
     with open(caminho, encoding='utf-8') as csvfile:
         leitor = csv.DictReader(csvfile)
@@ -25,6 +24,13 @@ def salvar_csv():
         writer.writeheader()
         writer.writerows(dados)
 
+def inserir_na_lista(item):
+    valores = tuple(item[col] for col in ['year', 'annual_edition', 'category', 'artist', 'song_or_album', 'winner', 'url'])
+    tag = "vencedor" if item['winner'].lower() == 'true' else ""
+    lista.insert("", "end", values=valores, tags=(tag,))
+    lista.tag_configure("vencedor", background="lightgreen")
+
+# ============================ FUNÇÕES ============================
 def atualizar_lista(categoria=None, artista=None, ano=None, titulo=None, palavra_chave=None):
     lista.delete(*lista.get_children())
     for item in dados:
@@ -40,18 +46,7 @@ def atualizar_lista(categoria=None, artista=None, ano=None, titulo=None, palavra
             texto_completo = " ".join(item.values()).lower()
             if palavra_chave.lower() not in texto_completo:
                 continue
-        valores = (
-            item['year'],
-            item['annual_edition'],
-            item['category'],
-            item['artist'],
-            item['song_or_album'],
-            item['winner'],
-            item['url']
-        )
-        tag = "vencedor" if item['winner'].lower() == 'true' else ""
-        lista.insert("", "end", values=valores, tags=(tag,))
-    lista.tag_configure("vencedor", background="lightgreen")
+        inserir_na_lista(item)
 
 def abrir_arquivo():
     global dados, caminho_arquivo
@@ -71,33 +66,13 @@ def buscar():
         entry_palavra.get()
     )
 
-def pesquisa_rapida(event=None):
-    termo = entry_pesquisa_rapida.get().strip().lower()
-    lista.delete(*lista.get_children())
-
-    for item in dados:
-        linha_completa = " ".join(item.values()).lower()
-        if termo in linha_completa:
-            valores = (
-                item['year'],
-                item['annual_edition'],
-                item['category'],
-                item['artist'],
-                item['song_or_album'],
-                item['winner'],
-                item['url']
-            )
-            tag = "vencedor" if item['winner'].lower() == 'true' else ""
-            lista.insert("", "end", values=valores, tags=(tag,))
-    lista.tag_configure("vencedor", background="lightgreen")
 
 def deletar_item():
     item_selecionado = lista.selection()
     if not item_selecionado:
         messagebox.showwarning("Aviso", "Selecione um item para deletar.")
         return
-    resposta = messagebox.askyesno("Confirmação", "Tem certeza que deseja deletar o item selecionado?")
-    if resposta:
+    if messagebox.askyesno("Confirmação", "Tem certeza que deseja deletar o item selecionado?"):
         for item in item_selecionado:
             valores = lista.item(item, 'values')
             lista.delete(item)
@@ -123,11 +98,7 @@ def adicionar_linha():
     }
 
     dados.append(nova_linha)
-    valores = tuple(nova_linha[col] for col in ['year', 'annual_edition', 'category', 'artist', 'song_or_album', 'winner', 'url'])
-    tag = "vencedor" if nova_linha['winner'].lower() == 'true' else ""
-    lista.insert("", "end", values=valores, tags=(tag,))
-    lista.tag_configure("vencedor", background="lightgreen")
-
+    inserir_na_lista(nova_linha)
     salvar_csv()
 
     for entry in [entry_ano, entry_ano_edicao, entry_categoria, entry_artista_nome, entry_titulo_musica, entry_vencedor, entry_url]:
@@ -138,6 +109,7 @@ def editar_item():
     if not selecionado:
         messagebox.showwarning("Aviso", "Selecione um item para editar.")
         return
+
     item_id = selecionado[0]
     valores_atuais = lista.item(item_id, "values")
 
@@ -169,7 +141,7 @@ def editar_item():
 # ========================== INTERFACE ===========================
 root = tk.Tk()
 root.title("Indicados ao Grammy")
-root.geometry("1200x700")
+root.geometry("1300x700")
 
 frame_topo = tk.Frame(root)
 frame_topo.pack(pady=10)
@@ -177,11 +149,6 @@ frame_topo.pack(pady=10)
 btn_abrir = tk.Button(frame_topo, text="Abrir CSV", command=abrir_arquivo)
 btn_abrir.grid(row=0, column=0, padx=5)
 
-# Campo de pesquisa rápida
-tk.Label(frame_topo, text="🔍 Pesquisar Geral").grid(row=0, column=1)
-entry_pesquisa_rapida = criar_entry_padrao(frame_topo, 30)
-entry_pesquisa_rapida.grid(row=0, column=2, columnspan=2, padx=5)
-entry_pesquisa_rapida.bind("<KeyRelease>", pesquisa_rapida)
 
 # Campos de busca
 tk.Label(frame_topo, text="Categoria").grid(row=1, column=0)
