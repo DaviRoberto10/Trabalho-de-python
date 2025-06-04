@@ -1,24 +1,26 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox
 import csv
+import os
 
 # ======================= VARIÁVEIS GLOBAIS =======================
 dados = []
-caminho_arquivo = None
+caminho_arquivo = 'grammy_winners.csv'
+usuarios_arquivo = 'usuarios.csv'
 
-# ======================= FUNÇÃO PADRÃO ENTRY ======================
+# ======================= FUNÇÃO PADRÃO ENTRY =======================
 def criar_entry_padrao(master, largura):
     return tk.Entry(master, width=largura)
 
-# ======================== FUNÇÕES AUXILIARES ========================
+# ======================= FUNÇÕES AUXILIARES ========================
 def carregar_dados(caminho):
+    if not os.path.exists(caminho):
+        return []
     with open(caminho, encoding='utf-8') as csvfile:
         leitor = csv.DictReader(csvfile)
         return list(leitor)
 
 def salvar_csv():
-    if not caminho_arquivo:
-        return
     with open(caminho_arquivo, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=['year', 'annual_edition', 'category', 'artist', 'song_or_album', 'winner', 'url'])
         writer.writeheader()
@@ -34,11 +36,11 @@ def inserir_na_lista(item):
 def atualizar_lista(categoria=None, artista=None, ano=None, titulo=None, palavra_chave=None):
     lista.delete(*lista.get_children())
     for item in dados:
-        if categoria and item['category'] != categoria:
+        if categoria and categoria.lower() not in item['category'].lower():
             continue
         if artista and artista.lower() not in item['artist'].lower():
             continue
-        if ano and ano != item['year']:
+        if ano and ano not in item['year']:
             continue
         if titulo and titulo.lower() not in item['song_or_album'].lower():
             continue
@@ -48,15 +50,6 @@ def atualizar_lista(categoria=None, artista=None, ano=None, titulo=None, palavra
                 continue
         inserir_na_lista(item)
 
-def abrir_arquivo():
-    global dados, caminho_arquivo
-    caminho = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
-    if caminho:
-        caminho_arquivo = caminho
-        dados.clear()
-        dados.extend(carregar_dados(caminho))
-        atualizar_lista()
-
 def buscar():
     atualizar_lista(
         entry_categoria_busca.get(),
@@ -65,7 +58,6 @@ def buscar():
         entry_titulo.get(),
         entry_palavra.get()
     )
-
 
 def deletar_item():
     item_selecionado = lista.selection()
@@ -83,10 +75,6 @@ def deletar_item():
         salvar_csv()
 
 def adicionar_linha():
-    if not caminho_arquivo:
-        messagebox.showerror("Erro", "Você precisa carregar um arquivo CSV primeiro.")
-        return
-
     nova_linha = {
         'year': entry_ano.get(),
         'annual_edition': entry_ano_edicao.get(),
@@ -138,94 +126,147 @@ def editar_item():
 
     tk.Button(janela_edicao, text="Salvar", command=salvar_edicao).grid(row=len(campos), column=0, columnspan=2, pady=10)
 
-# ========================== INTERFACE ===========================
-root = tk.Tk()
-root.title("Indicados ao Grammy")
-root.geometry("1300x700")
+# ======================= AUTENTICAÇÃO ========================
+def verificar_usuarios():
+    if not os.path.exists(usuarios_arquivo):
+        with open(usuarios_arquivo, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['usuario', 'senha'])
 
-frame_topo = tk.Frame(root)
-frame_topo.pack(pady=10)
+def cadastrar():
+    usuario = entry_usuario.get()
+    senha = entry_senha.get()
+    if not usuario or not senha:
+        messagebox.showerror("Erro", "Preencha todos os campos")
+        return
+    with open(usuarios_arquivo, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow([usuario, senha])
+    messagebox.showinfo("Sucesso", "Usuário cadastrado com sucesso!")
 
-btn_abrir = tk.Button(frame_topo, text="Abrir CSV", command=abrir_arquivo)
-btn_abrir.grid(row=0, column=0, padx=5)
+def logar():
+    usuario = entry_usuario.get()
+    senha = entry_senha.get()
+    with open(usuarios_arquivo, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['usuario'] == usuario and row['senha'] == senha:
+                janela.destroy()
+                iniciar_aplicacao()
+                return
+    messagebox.showerror("Erro", "Usuário não encontrado!")
 
+# ======================= INTERFACE PRINCIPAL ========================
+def iniciar_aplicacao():
+    global root, entry_categoria_busca, entry_artista, entry_ano_busca, entry_titulo, entry_palavra
+    global entry_ano, entry_ano_edicao, entry_categoria, entry_artista_nome, entry_titulo_musica, entry_vencedor, entry_url, lista
 
-# Campos de busca
-tk.Label(frame_topo, text="Categoria").grid(row=1, column=0)
-entry_categoria_busca = criar_entry_padrao(frame_topo, 20)
-entry_categoria_busca.grid(row=1, column=1)
+    root = tk.Tk()
+    root.title("Indicados ao Grammy")
+    root.geometry("1300x700")
 
-tk.Label(frame_topo, text="Artista").grid(row=1, column=2)
-entry_artista = criar_entry_padrao(frame_topo, 20)
-entry_artista.grid(row=1, column=3)
+    frame_topo = tk.Frame(root)
+    frame_topo.pack(pady=10)
 
-tk.Label(frame_topo, text="Ano").grid(row=1, column=4)
-entry_ano_busca = criar_entry_padrao(frame_topo, 10)
-entry_ano_busca.grid(row=1, column=5)
+    # Campos de busca
+    tk.Label(frame_topo, text="Categoria").grid(row=0, column=0)
+    entry_categoria_busca = criar_entry_padrao(frame_topo, 20)
+    entry_categoria_busca.grid(row=0, column=1)
 
-tk.Label(frame_topo, text="Título Música/Álbum").grid(row=1, column=6)
-entry_titulo = criar_entry_padrao(frame_topo, 20)
-entry_titulo.grid(row=1, column=7)
+    tk.Label(frame_topo, text="Artista").grid(row=0, column=2)
+    entry_artista = criar_entry_padrao(frame_topo, 20)
+    entry_artista.grid(row=0, column=3)
 
-tk.Label(frame_topo, text="Palavra-chave").grid(row=1, column=8)
-entry_palavra = criar_entry_padrao(frame_topo, 15)
-entry_palavra.grid(row=1, column=9)
+    tk.Label(frame_topo, text="Ano").grid(row=0, column=4)
+    entry_ano_busca = criar_entry_padrao(frame_topo, 10)
+    entry_ano_busca.grid(row=0, column=5)
 
-btn_buscar = tk.Button(frame_topo, text="Buscar", command=buscar)
-btn_buscar.grid(row=1, column=10, padx=5)
+    tk.Label(frame_topo, text="Título Música/Álbum").grid(row=0, column=6)
+    entry_titulo = criar_entry_padrao(frame_topo, 20)
+    entry_titulo.grid(row=0, column=7)
 
-btn_deletar = tk.Button(frame_topo, text="Deletar Selecionado", command=deletar_item)
-btn_deletar.grid(row=2, column=0, padx=5, pady=5)
+    tk.Label(frame_topo, text="Palavra-chave").grid(row=0, column=8)
+    entry_palavra = criar_entry_padrao(frame_topo, 15)
+    entry_palavra.grid(row=0, column=9)
 
-btn_editar = tk.Button(frame_topo, text="Editar Selecionado", command=editar_item)
-btn_editar.grid(row=2, column=1, padx=5)
+    tk.Button(frame_topo, text="Buscar", command=buscar).grid(row=0, column=10, padx=5)
+    tk.Button(frame_topo, text="Deletar Selecionado", command=deletar_item).grid(row=1, column=0, pady=5)
+    tk.Button(frame_topo, text="Editar Selecionado", command=editar_item).grid(row=1, column=1)
 
-# Campos de adição
-tk.Label(frame_topo, text="Ano").grid(row=3, column=0)
-entry_ano = criar_entry_padrao(frame_topo, 10)
-entry_ano.grid(row=3, column=1)
+    # Campos de adição
+    tk.Label(frame_topo, text="Ano").grid(row=2, column=0)
+    entry_ano = criar_entry_padrao(frame_topo, 10)
+    entry_ano.grid(row=2, column=1)
 
-tk.Label(frame_topo, text="Edição Anual").grid(row=3, column=2)
-entry_ano_edicao = criar_entry_padrao(frame_topo, 15)
-entry_ano_edicao.grid(row=3, column=3)
+    tk.Label(frame_topo, text="Edição Anual").grid(row=2, column=2)
+    entry_ano_edicao = criar_entry_padrao(frame_topo, 15)
+    entry_ano_edicao.grid(row=2, column=3)
 
-tk.Label(frame_topo, text="Categoria").grid(row=3, column=4)
-entry_categoria = criar_entry_padrao(frame_topo, 20)
-entry_categoria.grid(row=3, column=5)
+    tk.Label(frame_topo, text="Categoria").grid(row=2, column=4)
+    entry_categoria = criar_entry_padrao(frame_topo, 20)
+    entry_categoria.grid(row=2, column=5)
 
-tk.Label(frame_topo, text="Artista").grid(row=4, column=0)
-entry_artista_nome = criar_entry_padrao(frame_topo, 20)
-entry_artista_nome.grid(row=4, column=1)
+    tk.Label(frame_topo, text="Artista").grid(row=3, column=0)
+    entry_artista_nome = criar_entry_padrao(frame_topo, 20)
+    entry_artista_nome.grid(row=3, column=1)
 
-tk.Label(frame_topo, text="Música/Álbum").grid(row=4, column=2)
-entry_titulo_musica = criar_entry_padrao(frame_topo, 20)
-entry_titulo_musica.grid(row=4, column=3)
+    tk.Label(frame_topo, text="Música/Álbum").grid(row=3, column=2)
+    entry_titulo_musica = criar_entry_padrao(frame_topo, 20)
+    entry_titulo_musica.grid(row=3, column=3)
 
-tk.Label(frame_topo, text="Vencedor (True/False)").grid(row=4, column=4)
-entry_vencedor = criar_entry_padrao(frame_topo, 10)
-entry_vencedor.grid(row=4, column=5)
+    tk.Label(frame_topo, text="Vencedor (True/False)").grid(row=3, column=4)
+    entry_vencedor = criar_entry_padrao(frame_topo, 10)
+    entry_vencedor.grid(row=3, column=5)
 
-tk.Label(frame_topo, text="URL").grid(row=4, column=6)
-entry_url = criar_entry_padrao(frame_topo, 30)
-entry_url.grid(row=4, column=7)
+    tk.Label(frame_topo, text="URL").grid(row=3, column=6)
+    entry_url = criar_entry_padrao(frame_topo, 30)
+    entry_url.grid(row=3, column=7)
 
-btn_adicionar = tk.Button(frame_topo, text="Adicionar Linha", command=adicionar_linha)
-btn_adicionar.grid(row=4, column=8, padx=5)
+    tk.Button(frame_topo, text="Adicionar Linha", command=adicionar_linha).grid(row=3, column=8, padx=5)
 
-# ====================== TABELA DE REGISTROS ======================
-colunas = ("Ano", "Edição Anual", "Categoria", "Artista", "Música/Álbum", "Vencedor", "URL")
-frame_lista = tk.Frame(root)
-frame_lista.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+    # Lista
+    colunas = ("Ano", "Edição Anual", "Categoria", "Artista", "Música/Álbum", "Vencedor", "URL")
+    frame_lista = tk.Frame(root)
+    frame_lista.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-scrollbar_y = tk.Scrollbar(frame_lista, orient="vertical")
-lista = ttk.Treeview(frame_lista, columns=colunas, show="headings", yscrollcommand=scrollbar_y.set)
-scrollbar_y.config(command=lista.yview)
-scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
-lista.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar_y = tk.Scrollbar(frame_lista, orient="vertical")
+    lista = ttk.Treeview(frame_lista, columns=colunas, show="headings", yscrollcommand=scrollbar_y.set)
+    scrollbar_y.config(command=lista.yview)
+    scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+    lista.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-larguras = [70, 110, 170, 150, 180, 80, 300]
-for col, largura in zip(colunas, larguras):
-    lista.heading(col, text=col)
-    lista.column(col, width=largura)
+    larguras = [70, 110, 170, 150, 180, 80, 300]
+    for col, largura in zip(colunas, larguras):
+        lista.heading(col, text=col)
+        lista.column(col, width=largura)
 
-root.mainloop()
+    # Carregar dados
+    dados.clear()
+    dados.extend(carregar_dados(caminho_arquivo))
+    atualizar_lista()
+
+    root.mainloop()
+
+# ======================= TELA DE LOGIN ========================
+verificar_usuarios()
+
+janela = tk.Tk()
+janela.title("Sistema de Login")
+janela.geometry("300x250")
+
+label_usuario = tk.Label(janela, text="Usuário:")
+label_usuario.pack(pady=5)
+entry_usuario = tk.Entry(janela)
+entry_usuario.pack(pady=5)
+
+label_senha = tk.Label(janela, text="Senha:")
+label_senha.pack(pady=5)
+entry_senha = tk.Entry(janela, show="*")
+entry_senha.pack(pady=5)
+
+btn_cadastrar = tk.Button(janela, text="Cadastrar", command=cadastrar)
+btn_cadastrar.pack(pady=5)
+btn_logar = tk.Button(janela, text="Login", command=logar)
+btn_logar.pack(pady=5)
+
+janela.mainloop()
